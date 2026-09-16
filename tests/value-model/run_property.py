@@ -143,14 +143,15 @@ def do_op(m, op, attacker, rng):
         rate_num = rng.choice([2, 45, 100])   # 0.02%..0.1% per epoch
         m.last_stake_delta_epoch = m.epoch  # so tickets get +1 sometimes
         m.epoch_boundary(rate_num, 100000)
-        # crank any protocol stakes so counters absorb rewards
+        # crank any protocol stakes so counters absorb rewards. Nothing is
+        # caught here on purpose: a ProgramError/OverflowError reverts the
+        # whole epoch step in run_sequence (the crank is a tx too), and an
+        # AssertionError from update_active's reserve-alignment check is a
+        # finding this harness exists to report, never to swallow.
         for nm in list(m.stakes):
             s = m.stakes[nm]
             if s['owner'] == 'protocol' and s['deactivation_epoch'] is None:
-                try:
-                    m.update_active(nm)
-                except Exception:
-                    pass
+                m.update_active(nm)
         return ('epoch', 'epoch')
     if op == 'deposit':
         amt = rng.randint(1, max(1, attacker['sol'] // SOL)) * SOL
